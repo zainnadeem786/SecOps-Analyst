@@ -1,0 +1,62 @@
+﻿venv/
+.tmp/
+.pip-cache/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.netlify/
+frontend/.vercel/
+.eslintcache
+
+# Local environment files and secrets
+.env
+.env.*
+.env.example
+!.env.local.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env.local
+frontend/.env.local.*
+!frontend/.env.local.example
+.envrc
+
+# Local keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
+# Local runtime artifacts and generated payloads
+*.pid
+*.seed
+*.out
+*.err
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+backend/upload-response.json
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local test/cache artifacts with restrictive ACLs in this environment
+pytest-cache-files-*
+backend/pytest-cache-files-*
