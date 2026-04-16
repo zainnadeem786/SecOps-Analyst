@@ -22,7 +22,7 @@ export function AIAnalysis({ analysis, status, analysisStage, error }: AIAnalysi
     : "AI Analysis";
   const description = analysis
     ? analysis.source === "fallback"
-      ? "Live AI was unavailable, so the dashboard is showing the heuristic summary instead."
+      ? "Live AI could not be used for this upload, so the dashboard is showing the heuristic summary instead."
       : "Detection findings summarized by the local Ollama model."
     : "This featured section highlights the most important investigation guidance from the latest upload.";
 
@@ -59,6 +59,7 @@ export function AIAnalysis({ analysis, status, analysisStage, error }: AIAnalysi
               <Badge className={riskTone(analysis.risk_level)} variant="outline">
                 {analysis.risk_level} risk
               </Badge>
+              <Badge variant="outline">Score {analysis.risk_score}</Badge>
               <Badge variant={analysis.source === "fallback" ? "secondary" : "success"}>
                 {analysis.source === "fallback" ? "Fallback Analysis" : "AI Analysis (Live)"}
               </Badge>
@@ -74,10 +75,13 @@ export function AIAnalysis({ analysis, status, analysisStage, error }: AIAnalysi
               </section>
 
               <section className="rounded-3xl border border-white/10 bg-white/[0.07] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Risk level</p>
-                <p className="mt-4 text-3xl font-semibold text-white">{analysis.risk_level}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Risk assessment</p>
+                <div className="mt-4 flex items-end gap-4">
+                  <p className="text-3xl font-semibold text-white">{analysis.risk_level}</p>
+                  <p className="text-lg font-medium text-violet-100">Score {analysis.risk_score}</p>
+                </div>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
-                  Use this label to prioritize follow-up actions and decide whether the result can remain heuristic in hosted environments.
+                  Use this score and label to prioritize follow-up actions and decide whether the result can remain heuristic in hosted environments.
                 </p>
               </section>
             </div>
@@ -85,6 +89,21 @@ export function AIAnalysis({ analysis, status, analysisStage, error }: AIAnalysi
             <section className="rounded-3xl border border-white/10 bg-white/[0.07] p-5">
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Recommended action</div>
               <p className="mt-4 text-sm leading-7 text-slate-100">{analysis.recommended_action}</p>
+            </section>
+
+            <section className="rounded-3xl border border-white/10 bg-white/[0.07] p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Next steps</div>
+              {analysis.next_steps.length > 0 ? (
+                <div className="mt-4 space-y-3">
+                  {analysis.next_steps.map((step) => (
+                    <div key={step} className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 text-sm leading-6 text-slate-100">
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm leading-7 text-slate-300">No next steps were returned for this analysis.</p>
+              )}
             </section>
 
             {analysis.warning ? (

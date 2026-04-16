@@ -17,8 +17,6 @@ AI Log Analyzer is a full-stack SecOps helper that ingests web access logs, pars
 |   |-- lib
 |   |-- package.json
 |   `-- README.md
-|-- render.yaml
-|-- netlify.toml
 `-- venv
 ```
 
@@ -56,7 +54,8 @@ Frontend:
 Copy-Item frontend\.env.local.example frontend\.env.local
 ```
 
-Store sensitive or deployment-specific values in `.env` and `.env.local`, not in committed files.
+Store sensitive or deployment-specific values in `.env` and `.env.local`, not in committed files. The backend now requires
+`DATABASE_URL` pointing to a reachable PostgreSQL instance.
 
 ### 3. Prepare Ollama for local AI
 
@@ -67,6 +66,13 @@ ollama pull mistral
 If `ollama serve` reports that port `11434` is already in use, Ollama is probably already running.
 
 ### 4. Run the backend
+
+Ensure PostgreSQL is reachable at `DATABASE_URL` in `backend/.env`. Then run migrations:
+
+```powershell
+cd backend
+..\venv\Scripts\python.exe -m alembic upgrade head
+```
 
 ```powershell
 cd backend
@@ -93,9 +99,9 @@ npm run dev
 
 ## What you get
 
-- FastAPI backend with log parsing, detections, Ollama integration, health checks, and fallback AI behavior
-- Next.js App Router frontend with stage-based analysis UX and a cleaner SOC-style layout
-- Local `.env` support plus checked-in Render and Netlify config
+- FastAPI backend with parsing, detections, correlation, risk scoring, case management, GeoIP enrichment, and PDF export
+- Next.js App Router frontend with a SOC-style investigation workflow, cases, rules, and live mode
+- Local `.env` support and Postgres-backed persistence for investigation sessions
 - Deployment-safe behavior when Ollama is unavailable in hosted environments
 
 See the backend and frontend READMEs for subsystem-specific details.

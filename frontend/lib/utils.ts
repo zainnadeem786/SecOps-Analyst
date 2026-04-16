@@ -1,5 +1,5 @@
 ﻿import { clsx, type ClassValue } from "clsx";
-import type { AnalysisStage, DetectionSeverity, ParsedEvent } from "@/lib/types";
+import type { AnalysisStage, Detection, DetectionSeverity, ParsedEvent } from "@/lib/types";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -12,10 +12,13 @@ export function formatTimestamp(timestamp: string) {
     return timestamp;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  const formatted = new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "UTC",
   }).format(date);
+
+  return `${formatted} UTC`;
 }
 
 export function countHighSeverity(severities: DetectionSeverity[]) {
@@ -24,6 +27,10 @@ export function countHighSeverity(severities: DetectionSeverity[]) {
 
 export function countUniqueIps(events: ParsedEvent[]) {
   return new Set(events.map((event) => event.ip)).size;
+}
+
+export function countSuspiciousIps(detections: Detection[]) {
+  return new Set(detections.map((detection) => detection.source_ip)).size;
 }
 
 export function severityTone(severity: DetectionSeverity) {
@@ -69,6 +76,25 @@ export function riskTone(riskLevel: "Low" | "Medium" | "High" | "Critical") {
 
 export function formatDetectionLabel(type: string) {
   return type.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+export function getStrongestSignal(detections: Detection[]) {
+  if (detections.length === 0) {
+    return "No suspicious behavior matched the current rules.";
+  }
+
+  const severityRank: Record<DetectionSeverity, number> = {
+    Low: 1,
+    Moderate: 2,
+    Medium: 3,
+    High: 4,
+    Critical: 5,
+  };
+  const strongest = [...detections].sort((left, right) => (
+    severityRank[right.severity] - severityRank[left.severity] || right.count - left.count
+  ))[0];
+
+  return `${formatDetectionLabel(strongest.type)} from ${strongest.source_ip} (${strongest.severity})`;
 }
 
 export function formatAnalysisStage(stage: AnalysisStage) {

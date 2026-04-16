@@ -1,0 +1,76 @@
+{
+  "brute_force_threshold": 5,
+  "brute_force_critical_threshold": 10,
+  "scan_threshold": 10,
+  "scan_high_threshold": 20,
+  "probe_threshold": 8,
+  "probe_high_threshold": 15,
+  "time_window_seconds": 60,
+  "campaign_gap_minutes": 30,
+  "compromise_failure_threshold": 5,
+  "compromise_success_window_seconds": 300,
+  "compromise_success_status_codes": [
+    200
+  ],
+  "auth_endpoint_prefixes": [
+    "/login",
+    "/signin",
+    "/auth",
+    "/wp-login.php"
+  ],
+  "path_traversal_threshold": 1,
+  "path_traversal_critical_threshold": 3,
+  "path_traversal_patterns": [
+    "../",
+    "..\\",
+    "%2e%2e/",
+    "%2e%2e\\",
+    "..%2f",
+    "..%5c"
+  ],
+  "path_traversal_sensitive_targets": [
+    "/etc/passwd",
+    "/windows/system32",
+    "/winnt/system32",
+    "/proc/self/environ",
+    "/boot.ini"
+  ],
+  "sql_injection_threshold": 1,
+  "sql_injection_critical_threshold": 3,
+  "sql_injection_patterns": [
+    "' or '1'='1",
+    "\" or \"1\"=\"1",
+    "union select",
+    "--",
+    ";--",
+    "information_schema",
+    "sleep("
+  ],
+  "command_injection_threshold": 1,
+  "command_injection_critical_threshold": 3,
+  "command_injection_patterns": [
+    "; whoami",
+    "; id",
+    "; uname",
+    "; curl",
+    "; wget",
+    "&&",
+    "||",
+    "`",
+    "$("
+  ],
+  "suspicious_user_agent_threshold": 2,
+  "suspicious_user_agent_critical_threshold": 5,
+  "suspicious_user_agent_signatures": [
+    "sqlmap",
+    "nikto",
+    "nmap",
+    "curl",
+    "python-requests"
+  ],
+  "suspicious_user_agent_immediate_signatures": [
+    "sqlmap",
+    "nikto",
+    "nmap"
+  ]
+}

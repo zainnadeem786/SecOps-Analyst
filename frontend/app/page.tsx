@@ -1,15 +1,26 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Suspense, useEffect, useRef, useState } from "react";
 
-import { AIAnalysis } from "@/components/AIAnalysis";
-import { DetectionList } from "@/components/DetectionList";
-import { LogsTable } from "@/components/LogsTable";
+import { useAuth } from "@/components/AuthProvider";
+import { InvestigationWorkspace } from "@/components/InvestigationWorkspace";
+import { LiveModePanel } from "@/components/LiveModePanel";
 import { UploadForm } from "@/components/UploadForm";
 import { Badge } from "@/components/ui/badge";
-import { uploadLog } from "@/lib/api";
-import type { AnalysisStage, DashboardState, UploadResponse } from "@/lib/types";
-import { AlertTriangle, BrainCircuit, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { downloadIncidentReport, uploadLog } from "@/lib/api";
+import {
+  getActiveGuestCaseId,
+  getGuestUsageCount,
+  incrementGuestUsage,
+  setActiveGuestCaseId,
+} from "@/lib/guest";
+import { ApiError } from "@/lib/http";
+import { getCaseDetail } from "@/lib/platform-api";
+import type { AnalysisStage, CaseReference, DashboardState, UploadResponse } from "@/lib/types";
+import { AlertTriangle, BrainCircuit, Lock, ShieldCheck, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 const initialState: DashboardState = {
@@ -22,7 +33,12 @@ const initialState: DashboardState = {
 };
 
 export default function Page() {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [dashboardState, setDashboardState] = useState<DashboardState>(initialState);
+  const [isExporting, setIsExporting] = useState(false);
+  const [activeGuestCase, setActiveGuestCase] = useState<CaseReference | null>(null);
+  const [guestUsageCount, setGuestUsageCount] = useState(0);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const stageTimersRef = useRef<number[]>([]);
 
   function clearStageTimers() {
@@ -31,6 +47,70 @@ export default function Page() {
   }
 
   useEffect(() => clearStageTimers, []);
+
+  useEffect(() => {
+    setGuestUsageCount(getGuestUsageCount());
+  }, []);
+
+  useEffect(() => {
+    if (isAuthLoading || user || dashboardState.status === "running") {
+      return;
+    }
+
+    const storedCaseId = getActiveGuestCaseId();
+    if (!storedCaseId) {
+      setActiveGuestCase(null);
+      return;
+    }
+
+    const currentCaseId = dashboardState.result?.case?.id;
+    if (currentCaseId === storedCaseId && dashboardState.result?.case) {
+      setActiveGuestCase(dashboardState.result.case);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const detail = await getCaseDetail(storedCaseId);
+        if (cancelled) {
+          return;
+        }
+
+        const caseReference: CaseReference = {
+          id: detail.id,
+          name: detail.name,
+          created_at: detail.created_at,
+        };
+        const latestSnapshot = detail.sessions.at(-1)?.snapshot ?? null;
+
+        setActiveGuestCase(caseReference);
+        setDashboardState((current) => (
+          current.result
+            ? current
+            : {
+              ...current,
+              status: latestSnapshot ? "success" : "idle",
+              analysisStage: latestSnapshot ? "ai" : "idle",
+              uploadProgress: latestSnapshot ? 100 : 0,
+              error: null,
+              result: latestSnapshot,
+              lastUploadedFile: latestSnapshot?.session?.filename ?? current.lastUploadedFile,
+            }
+        ));
+      } catch {
+        if (cancelled) {
+          return;
+        }
+        setActiveGuestCase(null);
+        setActiveGuestCaseId(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dashboardState.result?.case, dashboardState.result?.case?.id, dashboardState.status, isAuthLoading, user]);
 
   function moveToStage(stage: AnalysisStage) {
     setDashboardState((current) => {
@@ -70,6 +150,7 @@ export default function Page() {
 
     try {
       const result = await uploadLog(file, {
+        caseId: user ? undefined : (activeGuestCase?.id ?? undefined),
         onUploadProgress: (progress) => {
           setDashboardState((current) => {
             if (current.status !== "running") {
@@ -100,6 +181,14 @@ export default function Page() {
         lastUploadedFile: file.name,
       });
 
+      if (!user) {
+        if (result.case) {
+          setActiveGuestCase(result.case);
+          setActiveGuestCaseId(result.case.id);
+        }
+        setGuestUsageCount(incrementGuestUsage(result.session?.id));
+      }
+
       if (result.ai_analysis.source === "fallback") {
         toast.warning("Fallback analysis returned", {
           id: toastId,
@@ -114,6 +203,10 @@ export default function Page() {
     } catch (error) {
       clearStageTimers();
       const message = error instanceof Error ? error.message : "The upload failed unexpectedly.";
+      if (error instanceof ApiError && error.code === "AUTH_REQUIRED") {
+        setGuestUsageCount(3);
+        setIsAuthPromptOpen(true);
+      }
       setDashboardState((current) => ({
         ...current,
         status: "error",
@@ -127,7 +220,79 @@ export default function Page() {
     }
   }
 
+  async function handleDownloadReport() {
+    if (!dashboardState.result) {
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const blob = await downloadIncidentReport(dashboardState.result);
+      const filename = (dashboardState.lastUploadedFile ?? "incident").replace(/\.[^.]+$/, "") || "incident";
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${filename}-report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+
+      toast.success("Incident report downloaded", {
+        description: "The current investigation snapshot was exported as a PDF.",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The incident report could not be generated.";
+      toast.error("Report export failed", {
+        description: message,
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  function handleLiveSnapshot(snapshot: UploadResponse) {
+    if (!user) {
+      if (snapshot.case) {
+        setActiveGuestCase(snapshot.case);
+        setActiveGuestCaseId(snapshot.case.id);
+      }
+      if (snapshot.session?.id) {
+        setGuestUsageCount(incrementGuestUsage(snapshot.session.id));
+      }
+    }
+
+    setDashboardState((current) => ({
+      ...current,
+      status: "success",
+      analysisStage: "ai",
+      uploadProgress: 100,
+      error: null,
+      result: snapshot,
+      lastUploadedFile: snapshot.session?.filename ?? snapshot.case?.name ?? current.lastUploadedFile,
+    }));
+  }
+
+  function handleLiveCaseReady(caseReference: CaseReference) {
+    if (!user) {
+      setActiveGuestCase(caseReference);
+      setActiveGuestCaseId(caseReference.id);
+    }
+
+    setDashboardState((current) => ({
+      ...current,
+      result: current.result
+        ? {
+          ...current.result,
+          case: caseReference,
+        }
+        : current.result,
+    }));
+  }
+
   const result: UploadResponse | null = dashboardState.result;
+  const guestRemaining = Math.max(0, 3 - guestUsageCount);
   const headerTone = dashboardState.status === "error"
     ? "destructive"
     : dashboardState.status === "running"
@@ -149,7 +314,7 @@ export default function Page() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.18),_transparent_18%),radial-gradient(circle_at_right,_rgba(59,130,246,0.18),_transparent_22%),linear-gradient(180deg,_#050816_0%,_#09101f_48%,_#030712_100%)] pb-10 text-slate-100">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1560px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <header className="glass-panel flex flex-col gap-5 rounded-3xl px-6 py-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200">
@@ -190,29 +355,106 @@ export default function Page() {
           uploadProgress={dashboardState.uploadProgress}
           error={dashboardState.error}
           lastUploadedFile={dashboardState.lastUploadedFile}
-          result={result}
         />
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,1fr)]">
-          <AIAnalysis
-            analysis={result?.ai_analysis ?? null}
+        {!user && !isAuthLoading ? (
+          <Card className="border-white/10 bg-slate-950/55">
+            <CardContent className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={guestRemaining === 0 ? "destructive" : "secondary"}>
+                    Guest mode
+                  </Badge>
+                  <Badge variant="outline">
+                    {guestUsageCount} used, {guestRemaining} remaining
+                  </Badge>
+                  {activeGuestCase ? <Badge variant="outline">Active case: {activeGuestCase.name}</Badge> : null}
+                </div>
+                <p className="text-sm leading-6 text-slate-300">
+                  Guests can analyze up to 3 logs and continue one active investigation case from this dashboard. Sign in to unlock saved case lists, sharing, rules management, and the executive view.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild variant="secondary">
+                  <Link href="/login">
+                    <UserRound className="h-4 w-4" />
+                    Login
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">
+                    <ShieldCheck className="h-4 w-4" />
+                    Register
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        <LiveModePanel
+          caseId={user ? undefined : (activeGuestCase?.id ?? undefined)}
+          onSnapshot={handleLiveSnapshot}
+          onCaseReady={handleLiveCaseReady}
+          onAuthRequired={() => {
+            setGuestUsageCount(3);
+            setIsAuthPromptOpen(true);
+          }}
+        />
+
+        <Suspense fallback={null}>
+          <InvestigationWorkspace
+            result={result}
             status={dashboardState.status}
             analysisStage={dashboardState.analysisStage}
             error={dashboardState.error}
+            isExporting={isExporting}
+            onDownload={handleDownloadReport}
           />
-          <DetectionList
-            detections={result?.detections ?? []}
-            isLoading={dashboardState.status === "running"}
-            hasResult={Boolean(result)}
-          />
-        </section>
-
-        <LogsTable
-          events={result?.events ?? []}
-          isLoading={dashboardState.status === "running"}
-          hasResult={Boolean(result)}
-        />
+        </Suspense>
       </div>
+
+      {isAuthPromptOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-6 backdrop-blur-sm">
+          <Card className="w-full max-w-lg border-rose-400/20 bg-slate-950/95 shadow-[0_30px_120px_rgba(15,23,42,0.8)]">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3 text-rose-200">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Free usage limit reached</CardTitle>
+                  <CardDescription className="mt-1 text-slate-300">
+                    Please login to continue using the platform.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm leading-6 text-slate-300">
+                Guest mode is limited to 3 successful analyses. Create an account or sign in to keep working with persistent cases, sharing, configurable rules, and executive reporting.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild className="flex-1">
+                  <Link href="/login" className="w-full">
+                    <UserRound className="h-4 w-4" />
+                    Login
+                  </Link>
+                </Button>
+                <Button asChild className="flex-1" variant="secondary">
+                  <Link href="/register" className="w-full">
+                    <ShieldCheck className="h-4 w-4" />
+                    Register
+                  </Link>
+                </Button>
+              </div>
+              <Button className="w-full" variant="ghost" onClick={() => setIsAuthPromptOpen(false)}>
+                Continue browsing
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
     </main>
   );
 }

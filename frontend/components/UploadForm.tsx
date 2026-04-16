@@ -13,14 +13,13 @@ import {
   UploadCloud,
 } from "lucide-react";
 
-import { SummaryCards } from "@/components/SummaryCards";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import type { AnalysisStage, UploadResponse, UploadStatus } from "@/lib/types";
+import type { AnalysisStage, UploadStatus } from "@/lib/types";
 import { MAX_UPLOAD_SIZE_BYTES, type UploadFormValues, uploadFormSchema } from "@/lib/validations";
 import { cn, describeAnalysisStage, formatAnalysisStage } from "@/lib/utils";
 
@@ -31,7 +30,6 @@ interface UploadFormProps {
   uploadProgress: number;
   error: string | null;
   lastUploadedFile: string | null;
-  result: UploadResponse | null;
 }
 
 const stageItems = [
@@ -77,7 +75,6 @@ export function UploadForm({
   uploadProgress,
   error,
   lastUploadedFile,
-  result,
 }: UploadFormProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputId = useId();
@@ -313,8 +310,6 @@ export function UploadForm({
             ) : null}
           </div>
         </div>
-
-        <SummaryCards result={result} isLoading={status === "running"} />
       </CardContent>
     </Card>
   );

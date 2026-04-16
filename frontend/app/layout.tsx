@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
+import { AuthProvider } from "@/components/AuthProvider";
+import { AppNavigation } from "@/components/AppNavigation";
 import { Toaster } from "@/components/ui/sonner";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +16,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className="dark">
       <body className="font-sans antialiased">
-        {children}
-        <Toaster richColors position="top-right" theme="dark" />
+        <AuthProvider>
+          <Suspense fallback={null}>
+            <AppNavigation />
+          </Suspense>
+          {children}
+          <Toaster richColors position="top-right" theme="dark" />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -16,6 +16,11 @@ def test_parse_apache_log_extracts_normalized_fields() -> None:
     assert event.endpoint == "/admin/login"
     assert event.status_code == 200
     assert event.timestamp == "2026-04-09T10:00:00+00:00"
+    inspected_event = result.inspected_events[0]
+    assert inspected_event.method == "GET"
+    assert inspected_event.request_target == "/admin/login?next=/dashboard"
+    assert inspected_event.query_string == "next=/dashboard"
+    assert inspected_event.user_agent == "Mozilla/5.0"
 
 
 def test_parse_log_skips_invalid_lines_and_keeps_valid_entries() -> None:
@@ -44,3 +49,4 @@ def test_parse_log_strips_utf8_bom_from_the_first_line() -> None:
 
     assert len(result.events) == 1
     assert result.events[0].ip == "203.0.113.10"
+    assert result.inspected_events[0].method == "POST"

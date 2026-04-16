@@ -27,7 +27,7 @@ export function LogsTable({ events, isLoading, hasResult }: LogsTableProps) {
           <div>
             <CardTitle>Parsed events</CardTitle>
             <CardDescription className="mt-2 leading-6 text-slate-300">
-              Structured web access rows from the latest upload. Sticky headers keep the table readable during long investigations.
+              Structured web access rows from the latest upload. Sticky headers keep the table readable during long investigations, and all timestamps are shown in UTC.
             </CardDescription>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sky-200">
