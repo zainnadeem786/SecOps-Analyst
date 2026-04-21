@@ -5,11 +5,15 @@ import { useEffect, useState } from "react";
 import { FolderSearch, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingState } from "@/components/LoadingState";
+import { PanelSection } from "@/components/PanelSection";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createCase, listCases } from "@/lib/platform-api";
 import type { CaseSummary } from "@/lib/types";
 import { formatTimestamp, riskTone } from "@/lib/utils";
@@ -19,6 +23,7 @@ export default function CasesPage() {
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [isLoadingCases, setIsLoadingCases] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [sortKey, setSortKey] = useState<"created" | "risk" | "sessions">("created");
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -56,73 +61,97 @@ export default function CasesPage() {
     }
   }
 
+  const sortedCases = [...cases].sort((left, right) => {
+    if (sortKey === "risk") {
+      return right.latest_risk_score - left.latest_risk_score;
+    }
+    if (sortKey === "sessions") {
+      return right.session_count - left.session_count;
+    }
+    return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+  });
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.18),_transparent_18%),radial-gradient(circle_at_right,_rgba(59,130,246,0.18),_transparent_22%),linear-gradient(180deg,_#050816_0%,_#09101f_48%,_#030712_100%)] pb-10 text-slate-100">
-      <div className="mx-auto flex w-full max-w-[1560px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <RequireAuth>
-          <Card className="glass-panel rounded-3xl border-white/10 bg-slate-950/55">
-            <CardHeader className="pb-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <CardTitle>Investigation cases</CardTitle>
-                  <CardDescription className="mt-2 max-w-3xl leading-6 text-slate-300">
-                    Persistent investigation sessions grouped into cases so analysts can revisit uploads, compare risk over time, and continue work without starting from scratch.
-                  </CardDescription>
-                </div>
-                <Button onClick={handleCreateCase} disabled={isCreating}>
-                  {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  {isCreating ? "Creating case..." : "Create case"}
-                </Button>
+    <RequireAuth>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Cases"
+          title="Persistent investigation cases"
+          description="Review saved investigations, compare risk over time, and jump directly into the next session that needs analyst attention."
+          actions={(
+            <>
+              <div className="inline-flex rounded-full border border-white/8 bg-[#0f1828] p-1">
+                {[
+                  { id: "created", label: "Newest" },
+                  { id: "risk", label: "Highest risk" },
+                  { id: "sessions", label: "Most sessions" },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setSortKey(option.id as typeof sortKey)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${sortKey === option.id ? "bg-sky-400/15 text-sky-100" : "text-slate-400 hover:text-white"}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
               </div>
-            </CardHeader>
-            <CardContent>
-              {isLoadingCases ? (
-                <div className="rounded-3xl border border-white/10 bg-slate-950/35 px-5 py-10 text-center text-sm text-slate-400">
-                  Loading saved investigations...
-                </div>
-              ) : cases.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-white/10 bg-slate-950/30 px-5 py-10 text-center text-sm leading-6 text-slate-400">
-                  No persistent cases exist yet. Upload a log on the dashboard or create an empty case to begin.
-                </div>
-              ) : (
-                <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-                  {cases.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/cases/${item.id}`}
-                      className="rounded-3xl border border-white/10 bg-slate-950/35 p-5 transition hover:border-white/20 hover:bg-slate-900/45"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-lg font-semibold text-white">{item.name}</p>
-                          <p className="mt-2 text-sm leading-6 text-slate-300">{formatTimestamp(item.created_at)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-sky-200">
-                          <FolderSearch className="h-5 w-5" />
-                        </div>
-                      </div>
+              <Button onClick={handleCreateCase} disabled={isCreating}>
+                {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {isCreating ? "Creating case..." : "Create case"}
+              </Button>
+            </>
+          )}
+        />
 
-                      <div className="mt-5 flex flex-wrap gap-2">
-                        <Badge variant="outline">{item.session_count} sessions</Badge>
+        <PanelSection
+          title="Case inventory"
+          description="Sortable investigation list with recent session activity, latest risk, and repeated attacker context."
+          actions={<Badge variant="outline">{cases.length} cases</Badge>}
+        >
+          {isLoadingCases ? (
+            <LoadingState label="Loading saved investigations" />
+          ) : cases.length === 0 ? (
+            <EmptyState title="No persistent cases exist yet" description="Open the investigation workspace or create an empty case to begin." />
+          ) : (
+            <div className="overflow-hidden rounded-[20px] border border-white/8">
+              <Table>
+                <TableHeader className="bg-[#0f1828]">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Case</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Sessions</TableHead>
+                    <TableHead>Latest risk</TableHead>
+                    <TableHead>Repeat attackers</TableHead>
+                    <TableHead>Latest activity</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedCases.map((item) => (
+                    <TableRow key={item.id} className="bg-[#0b1422]">
+                      <TableCell>
+                        <Link href={`/cases/${item.id}`} className="flex items-center gap-3 text-white transition hover:text-sky-200">
+                          <FolderSearch className="h-4 w-4 text-sky-200" />
+                          <span className="font-medium">{item.name}</span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-slate-400">{formatTimestamp(item.created_at)}</TableCell>
+                      <TableCell>{item.session_count}</TableCell>
+                      <TableCell>
                         <Badge className={riskTone(item.latest_risk_score > 70 ? "High" : item.latest_risk_score > 30 ? "Medium" : "Low")} variant="outline">
-                          Risk {item.latest_risk_score}
+                          {item.latest_risk_score}
                         </Badge>
-                        <Badge variant="outline">{item.repeated_attacker_count} repeat attackers</Badge>
-                      </div>
-
-                      {item.latest_uploaded_at ? (
-                        <p className="mt-4 text-sm text-slate-400">
-                          Latest session: {formatTimestamp(item.latest_uploaded_at)}
-                        </p>
-                      ) : null}
-                    </Link>
+                      </TableCell>
+                      <TableCell>{item.repeated_attacker_count}</TableCell>
+                      <TableCell className="text-slate-400">{item.latest_uploaded_at ? formatTimestamp(item.latest_uploaded_at) : "No sessions yet"}</TableCell>
+                    </TableRow>
                   ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </RequireAuth>
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </PanelSection>
       </div>
-    </main>
+    </RequireAuth>
   );
 }

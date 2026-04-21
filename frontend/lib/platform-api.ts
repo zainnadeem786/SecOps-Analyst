@@ -2,6 +2,9 @@ import { normalizeUploadResponse } from "@/lib/api";
 import { API_BASE_URL, apiFetch, buildApiError } from "@/lib/http";
 import { getGuestId } from "@/lib/guest";
 import type {
+  APIKeyCreateResponse,
+  APIKeyScope,
+  APIKeySummary,
   AuthResponse,
   CaseDetail,
   CaseReference,
@@ -52,6 +55,24 @@ export async function logoutUser(): Promise<void> {
 
 export async function getCurrentUser(): Promise<AuthResponse> {
   return (await apiFetch("/auth/me")) as AuthResponse;
+}
+
+export async function createApiKey(name: string, scope: APIKeyScope): Promise<APIKeyCreateResponse> {
+  return (await apiFetch("/auth/api-keys", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, scope }),
+  })) as APIKeyCreateResponse;
+}
+
+export async function listApiKeys(): Promise<APIKeySummary[]> {
+  return (await apiFetch("/auth/api-keys")) as APIKeySummary[];
+}
+
+export async function revokeApiKey(keyId: string): Promise<APIKeySummary> {
+  return (await apiFetch(`/auth/api-keys/${keyId}`, {
+    method: "DELETE",
+  })) as APIKeySummary;
 }
 
 export async function createCase(name?: string): Promise<CaseReference> {

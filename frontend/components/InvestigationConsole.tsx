@@ -1,19 +1,14 @@
-﻿"use client";
-
-import { OverviewPage } from "@/components/OverviewPage";
-
-export default function Page() {
-  return <OverviewPage />;
-}
-
-/*
+"use client";
 
 import Link from "next/link";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { BrainCircuit, Lock, ShieldCheck, UserRound } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/AuthProvider";
-import { InvestigationWorkspace } from "@/components/InvestigationWorkspace";
+import { AnalystWorkspace } from "@/components/AnalystWorkspace";
 import { LiveModePanel } from "@/components/LiveModePanel";
+import { PageHeader } from "@/components/PageHeader";
 import { UploadForm } from "@/components/UploadForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,8 +23,6 @@ import {
 import { ApiError } from "@/lib/http";
 import { getCaseDetail } from "@/lib/platform-api";
 import type { AnalysisStage, CaseReference, DashboardState, UploadResponse } from "@/lib/types";
-import { AlertTriangle, BrainCircuit, Lock, ShieldCheck, UserRound } from "lucide-react";
-import { toast } from "sonner";
 
 const initialState: DashboardState = {
   status: "idle",
@@ -40,7 +33,7 @@ const initialState: DashboardState = {
   lastUploadedFile: null,
 };
 
-export default function Page() {
+export function InvestigationConsole() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [dashboardState, setDashboardState] = useState<DashboardState>(initialState);
   const [isExporting, setIsExporting] = useState(false);
@@ -321,65 +314,35 @@ export default function Page() {
           : "Ready";
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.18),_transparent_18%),radial-gradient(circle_at_right,_rgba(59,130,246,0.18),_transparent_22%),linear-gradient(180deg,_#050816_0%,_#09101f_48%,_#030712_100%)] pb-10 text-slate-100">
-      <div className="mx-auto flex w-full max-w-[1560px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="glass-panel flex flex-col gap-5 rounded-3xl px-6 py-6 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              SOC dashboard
-            </div>
-            <div>
-              <h1 className="font-heading text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                AI Log Analyzer
-              </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-                Review parsed access logs, prioritize suspicious detections, and surface live or fallback AI guidance in a cleaner SecOps workflow that is ready for local use and cloud deployment.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
-            <Badge variant={headerTone}>{headerLabel}</Badge>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-              <div className="flex items-center gap-2 text-slate-200">
-                <BrainCircuit className="h-4 w-4 text-violet-200" />
+    <>
+      <div className="mx-auto max-w-[1440px] space-y-6 pb-8 sm:space-y-8">
+        <PageHeader
+          className="px-7 py-7 sm:px-8"
+          eyebrow="Investigations"
+          title="Analyst investigation workspace"
+          description="Upload access logs, triage detections, correlate campaigns, and move from first signal to analyst action in one controlled SOC workspace."
+          actions={(
+            <>
+              <Badge variant={headerTone}>{headerLabel}</Badge>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#111c2d] px-4 py-2 text-sm text-slate-300">
+                <BrainCircuit className="h-4 w-4 text-sky-200" />
                 {result?.ai_analysis.source === "fallback" ? "Fallback remains cloud-safe" : "Local Ollama path enabled"}
               </div>
-            </div>
-            {dashboardState.error ? (
-              <div className="flex items-start gap-2 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{dashboardState.error}</span>
-              </div>
-            ) : null}
-          </div>
-        </header>
-
-        <UploadForm
-          onUpload={handleUpload}
-          status={dashboardState.status}
-          analysisStage={dashboardState.analysisStage}
-          uploadProgress={dashboardState.uploadProgress}
-          error={dashboardState.error}
-          lastUploadedFile={dashboardState.lastUploadedFile}
+            </>
+          )}
         />
 
         {!user && !isAuthLoading ? (
-          <Card className="border-white/10 bg-slate-950/55">
-            <CardContent className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-2">
+          <Card className="border-white/8 bg-[#0b1422]">
+            <CardContent className="flex flex-col gap-5 px-6 py-6 sm:px-7 sm:py-7 xl:flex-row xl:items-center xl:justify-between">
+              <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={guestRemaining === 0 ? "destructive" : "secondary"}>
-                    Guest mode
-                  </Badge>
-                  <Badge variant="outline">
-                    {guestUsageCount} used, {guestRemaining} remaining
-                  </Badge>
+                  <Badge variant={guestRemaining === 0 ? "destructive" : "secondary"}>Guest mode</Badge>
+                  <Badge variant="outline">{guestUsageCount} used, {guestRemaining} remaining</Badge>
                   {activeGuestCase ? <Badge variant="outline">Active case: {activeGuestCase.name}</Badge> : null}
                 </div>
-                <p className="text-sm leading-6 text-slate-300">
-                  Guests can analyze up to 3 logs and continue one active investigation case from this dashboard. Sign in to unlock saved case lists, sharing, rules management, and the executive view.
+                <p className="max-w-[78ch] text-sm leading-7 text-slate-400">
+                  Guests can analyze up to 3 logs and continue one active investigation from this workspace. Sign in to unlock persistent case lists, sharing, rules management, and the executive view.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -400,26 +363,37 @@ export default function Page() {
           </Card>
         ) : null}
 
-        <LiveModePanel
-          caseId={user ? undefined : (activeGuestCase?.id ?? undefined)}
-          onSnapshot={handleLiveSnapshot}
-          onCaseReady={handleLiveCaseReady}
-          onAuthRequired={() => {
-            setGuestUsageCount(3);
-            setIsAuthPromptOpen(true);
-          }}
-        />
-
-        <Suspense fallback={null}>
-          <InvestigationWorkspace
-            result={result}
+        <div className="space-y-7">
+          <UploadForm
+            onUpload={handleUpload}
             status={dashboardState.status}
             analysisStage={dashboardState.analysisStage}
+            uploadProgress={dashboardState.uploadProgress}
             error={dashboardState.error}
-            isExporting={isExporting}
-            onDownload={handleDownloadReport}
+            lastUploadedFile={dashboardState.lastUploadedFile}
           />
-        </Suspense>
+
+          <LiveModePanel
+            caseId={user ? undefined : (activeGuestCase?.id ?? undefined)}
+            onSnapshot={handleLiveSnapshot}
+            onCaseReady={handleLiveCaseReady}
+            onAuthRequired={() => {
+              setGuestUsageCount(3);
+              setIsAuthPromptOpen(true);
+            }}
+          />
+
+          <Suspense fallback={null}>
+            <AnalystWorkspace
+              result={result}
+              status={dashboardState.status}
+              analysisStage={dashboardState.analysisStage}
+              error={dashboardState.error}
+              isExporting={isExporting}
+              onDownload={handleDownloadReport}
+            />
+          </Suspense>
+        </div>
       </div>
 
       {isAuthPromptOpen ? (
@@ -463,7 +437,6 @@ export default function Page() {
           </Card>
         </div>
       ) : null}
-    </main>
+    </>
   );
 }
-*/

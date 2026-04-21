@@ -1,0 +1,13 @@
+# Replace placeholders like YOUR_EMAIL, YOUR_PASSWORD, YOUR_INGEST_API_KEY, YOUR_READ_API_KEY, YOUR_CASE_ID, YOUR_KEY_ID, and ABSOLUTE_PATH_TO_LOG_FILE before running these commands.
+curl.exe -X POST "http://localhost:8000/auth/register" -H "Content-Type: application/json" -d "{\"email\":\"YOUR_EMAIL\",\"password\":\"YOUR_PASSWORD\"}" -c cookies.txt
+curl.exe -X POST "http://localhost:8000/auth/login" -H "Content-Type: application/json" -d "{\"email\":\"YOUR_EMAIL\",\"password\":\"YOUR_PASSWORD\"}" -c cookies.txt -b cookies.txt
+curl.exe -X POST "http://localhost:8000/auth/api-keys" -H "Content-Type: application/json" -d "{\"name\":\"Pipeline ingest\",\"scope\":\"ingest\"}" -c cookies.txt -b cookies.txt
+curl.exe -X POST "http://localhost:8000/auth/api-keys" -H "Content-Type: application/json" -d "{\"name\":\"Readonly\",\"scope\":\"read\"}" -c cookies.txt -b cookies.txt
+curl.exe "http://localhost:8000/auth/api-keys" -c cookies.txt -b cookies.txt
+curl.exe -X POST "http://localhost:8000/upload-log" -H "Authorization: Bearer YOUR_INGEST_API_KEY" -F "file=@ABSOLUTE_PATH_TO_LOG_FILE"
+curl.exe -X POST "http://localhost:8000/upload-log" -H "Authorization: Bearer YOUR_INGEST_API_KEY" -F "case_id=YOUR_CASE_ID" -F "file=@ABSOLUTE_PATH_TO_LOG_FILE"
+curl.exe "http://localhost:8000/cases" -H "Authorization: Bearer YOUR_READ_API_KEY"
+curl.exe "http://localhost:8000/cases/YOUR_CASE_ID" -H "Authorization: Bearer YOUR_READ_API_KEY"
+curl.exe "http://localhost:8000/search?q=ip:203.0.113.10%20status:401&case_id=YOUR_CASE_ID" -H "Authorization: Bearer YOUR_READ_API_KEY"
+curl.exe "http://localhost:8000/executive/summary" -H "Authorization: Bearer YOUR_READ_API_KEY"
+curl.exe -X DELETE "http://localhost:8000/auth/api-keys/YOUR_KEY_ID" -c cookies.txt -b cookies.txt

@@ -135,7 +135,7 @@ export function InvestigationWorkspace({
           />
         )}
         summaryPanel={(
-          <>
+          <div className="grid gap-6 xl:grid-cols-2 2xl:grid-cols-3">
             <RiskSummary
               result={result}
               isLoading={status === "running"}
@@ -153,10 +153,10 @@ export function InvestigationWorkspace({
               isLoading={status === "running"}
               hasResult={hasResult}
             />
-          </>
+          </div>
         )}
         flowPanel={(
-          <div className="grid items-start gap-6 xl:grid-cols-2">
+          <div className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
             <AttackCampaigns
               campaigns={result?.attack_campaigns ?? []}
               isLoading={status === "running"}

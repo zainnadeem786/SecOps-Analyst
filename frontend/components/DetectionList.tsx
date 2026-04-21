@@ -30,7 +30,7 @@ export function DetectionList({ detections, isLoading, hasResult }: DetectionLis
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
-          <div className="grid gap-4 2xl:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-2">
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="space-y-3 rounded-3xl border border-white/10 bg-slate-950/40 p-5">
                 <Skeleton className="h-5 w-48" />
@@ -45,7 +45,7 @@ export function DetectionList({ detections, isLoading, hasResult }: DetectionLis
             {hasResult ? "No detections matched the current rules for this upload." : "Upload a log file to populate the detections list."}
           </div>
         ) : (
-          <div className="grid gap-4 2xl:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-2">
             {detections.map((detection) => (
               <article
                 key={`${detection.type}-${detection.source_ip}`}

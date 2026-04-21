@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { WheelEvent as ReactWheelEvent } from "react";
 import L from "leaflet";
 import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 
@@ -171,6 +172,11 @@ export function AttackMapInner({ markers }: { markers: AttackMapMarker[] }) {
     const wrapperElement = wrapperRef.current;
     const mapElement = mapInstance.getContainer();
     const handleWheel = (event: WheelEvent) => {
+      const eventTarget = event.target;
+      if (eventTarget instanceof Element && eventTarget.closest("[data-attack-map-overlay]")) {
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
@@ -187,10 +193,8 @@ export function AttackMapInner({ markers }: { markers: AttackMapMarker[] }) {
     wrapperElement.style.overscrollBehavior = "contain";
     mapElement.style.overscrollBehavior = "contain";
 
-    wrapperElement.addEventListener("wheel", handleWheel, { passive: false, capture: true });
     mapElement.addEventListener("wheel", handleWheel, { passive: false, capture: true });
     return () => {
-      wrapperElement.removeEventListener("wheel", handleWheel, { capture: true });
       mapElement.removeEventListener("wheel", handleWheel, { capture: true });
     };
   }, [mapInstance]);
@@ -200,15 +204,11 @@ export function AttackMapInner({ markers }: { markers: AttackMapMarker[] }) {
       return null;
     }
 
-    const panelWidth = activeCluster.cluster.size > 1 ? 344 : 236;
-    const panelHeight = activeCluster.cluster.size > 2 ? 188 : 136;
-    const desiredLeft = activeCluster.point.x + 28;
-    const left = desiredLeft + panelWidth > containerSize.width - 12
-      ? Math.max(12, activeCluster.point.x - panelWidth - 28)
-      : desiredLeft;
-    const top = Math.min(Math.max(12, activeCluster.point.y - panelHeight / 2), containerSize.height - panelHeight - 12);
+    const panelWidth = Math.min(activeCluster.cluster.size > 1 ? 320 : 248, Math.max(220, containerSize.width - 24));
+    const left = Math.max(12, containerSize.width - panelWidth - 12);
+    const top = 12;
 
-    return { left, top };
+    return { left, top, width: panelWidth };
   }, [activeCluster, containerSize.height, containerSize.width]);
 
   const focusMarker = useCallback((marker: AttackMapMarker) => {
@@ -240,7 +240,7 @@ export function AttackMapInner({ markers }: { markers: AttackMapMarker[] }) {
   return (
     <div
       ref={wrapperRef}
-      className="relative h-[360px] w-full overflow-hidden rounded-3xl overscroll-contain"
+      className="relative h-[400px] w-full overflow-hidden rounded-3xl overscroll-contain sm:h-[460px] xl:h-[520px]"
     >
       <MapContainer
         center={center}
@@ -273,13 +273,14 @@ export function AttackMapInner({ markers }: { markers: AttackMapMarker[] }) {
       {activeCluster && overlayPosition ? (
         <div
           className="absolute z-[500] pointer-events-none"
-          style={{ left: overlayPosition.left, top: overlayPosition.top }}
+          style={{ left: overlayPosition.left, top: overlayPosition.top, width: overlayPosition.width }}
         >
           <div
             className={cn(
-              "pointer-events-auto rounded-[18px] border border-white/10 bg-slate-950/96 p-2.5 shadow-[0_18px_36px_rgba(2,6,23,0.38)] backdrop-blur-xl",
-              activeCluster.cluster.size > 1 ? "w-[344px]" : "w-[236px]",
+              "pointer-events-auto max-h-[calc(100vh-220px)] overflow-hidden rounded-[18px] border border-white/10 bg-slate-950/94 p-2.5 shadow-[0_18px_36px_rgba(2,6,23,0.38)] backdrop-blur-xl",
+              activeCluster.cluster.size > 1 ? "min-w-[240px]" : "min-w-[220px]",
             )}
+            data-attack-map-overlay
             onMouseEnter={clearCloseTimer}
             onMouseLeave={scheduleClose}
           >
@@ -477,6 +478,14 @@ function ClusterFlyout({
     return left.country.localeCompare(right.country);
   });
 
+  function handleFlyoutWheel(event: ReactWheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const container = event.currentTarget;
+    container.scrollTop += event.deltaY;
+  }
+
   return (
     <div className="w-full text-slate-100">
       <p className="text-sm font-semibold text-white">
@@ -485,21 +494,27 @@ function ClusterFlyout({
       <p className="mt-1 text-xs text-slate-400">
         {cluster.attackCount} attack path{cluster.attackCount === 1 ? "" : "s"} | avg risk {cluster.averageRisk}
       </p>
-      <div className={cn("mt-2.5 gap-2", cluster.size > 1 ? "grid grid-cols-2" : "space-y-2")}>
+      {cluster.size > 1 ? (
+        <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-500">Click a location to focus</p>
+      ) : null}
+      <div
+        className="scrollbar-hidden mt-2.5 max-h-[260px] space-y-2 overflow-y-auto overscroll-contain pr-1"
+        onWheel={handleFlyoutWheel}
+      >
         {entries.map((marker) => (
           <button
             key={marker.key}
             type="button"
             onClick={() => onSelectMarker(marker)}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-left transition hover:border-cyan-300/30 hover:bg-cyan-500/[0.08]"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition hover:border-cyan-300/30 hover:bg-cyan-500/[0.08]"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="truncate text-sm font-semibold text-white">{marker.country}</p>
-              <span className="shrink-0 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+              <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-slate-500">
                 {marker.attackCount} path{marker.attackCount === 1 ? "" : "s"}
               </span>
             </div>
-            <p className="mt-1 truncate text-[11px] text-slate-300">{marker.label}</p>
+            <p className="mt-1 text-[12px] leading-5 text-slate-300">{marker.label}</p>
             <p className="mt-1 break-all font-mono text-[10px] text-cyan-100">{marker.ips.join(", ")}</p>
             <p className="mt-1 text-[10px] text-slate-500">
               Location {marker.lat.toFixed(2)}, {marker.lon.toFixed(2)}

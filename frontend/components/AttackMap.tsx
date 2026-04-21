@@ -11,7 +11,7 @@ const AttackMapInner = dynamic(
   () => import("@/components/AttackMapInner").then((module) => module.AttackMapInner),
   {
     ssr: false,
-    loading: () => <Skeleton className="h-[360px] w-full rounded-3xl" />,
+    loading: () => <Skeleton className="h-[400px] w-full rounded-3xl sm:h-[460px] xl:h-[520px]" />,
   },
 );
 
@@ -42,7 +42,7 @@ export function AttackMap({ detections, campaigns, isLoading, hasResult }: Attac
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <Skeleton className="h-[360px] w-full rounded-3xl" />
+          <Skeleton className="h-[400px] w-full rounded-3xl sm:h-[460px] xl:h-[520px]" />
         ) : markers.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-slate-950/30 px-5 py-10 text-center text-sm leading-6 text-slate-400">
             {hasResult ? "No suspicious activity detected" : "Upload logs to begin investigation"}

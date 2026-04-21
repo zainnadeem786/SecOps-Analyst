@@ -1,6 +1,6 @@
 # Project Overview
 
-Last updated: April 15, 2026
+Last updated: April 16, 2026
 
 ## Project Summary
 
@@ -107,7 +107,7 @@ What exists today:
   - tolerates list-like model risk outputs and normalizes them safely
 - PDF report export service
   - uses ReportLab
-  - renders a professional multi-section PDF report with risk-aware colors, gauges, summary blocks, and footer watermarking
+  - renders a professional multi-section PDF report with risk-aware colors, gauges, summary blocks, and a centered transparent watermark treatment
 - GeoIP enrichment service
   - resolves suspicious IPs with a cached GeoIP lookup
   - never fails the analysis pipeline on GeoIP errors
@@ -139,29 +139,35 @@ Status: implemented and verified
 What exists today:
 
 - Next.js App Router app
-- Tailwind-based dashboard UI
-- SOC-style top navigation with case switcher and global search
+- analyst-grade dark enterprise workspace shell
+- left sidebar navigation for `Overview`, `Investigations`, `Cases`, `Live Monitor`, `Executive`, `Rules`, and `Settings`
+- top command bar with case switcher, URL-driven global search, quick actions, and auth-aware user controls
+- `/` overview route for workspace entry points and access context
+- `/investigations` as the primary upload and triage workspace
+- `/live-monitor` as a dedicated streaming and replay workspace
+- `/settings` for API key management and local workspace defaults
 - login and register pages
 - guest usage banner and auth-required modal
 - upload panel with staged workflow messaging
 - backward-compatible typed API client
 - UTC timestamp rendering in investigation views
-- investigator-focused dashboard layout
-- AI analysis panel
-- canonical risk summary panel with gauge visualization
-- attack campaigns panel
-- phased attack flow timeline panel
+- split-panel investigation layout with a persistent desktop context drawer and mobile slide-over
+- compact top summary strip for risk, campaigns, high-severity findings, suspicious IPs, and primary action
+- tabbed investigation workspace: `Summary`, `Detections`, `Campaigns`, `Timeline`, `Events`, `Map`, and `Report`
+- dense detections and events tables with expandable evidence previews
+- AI analysis panel and next-step context drawer content
+- canonical risk summary strip
+- grouped campaign analysis panel
+- structured attack timeline panel
 - attack map panel with zoom-based threat clustering, animated attack paths, and defended-asset targeting
 - cases list and case detail workspace
 - secure shared case viewer
 - protected rules and executive routes
-- case-scoped investigation search
+- case-scoped investigation search with shared filter bar state
 - authenticated executive dashboard
 - live mode controls with WebSocket streaming
 - investigation actions panel with copy-ready containment commands and AI next steps
-- rules editor panel
-- detection cards with evidence preview
-- parsed events table
+- grouped rules workspace
 - case session history labels for upload vs live-stream sources
 - incident report download button
 - empty and loading states across the investigation workflow
@@ -199,11 +205,16 @@ The latest completed changes already in the workspace are:
 - added API-key storage, scoped auth, and ingest support for uploads and live streams
 - added persisted session `source_type` metadata for uploads versus live streams
 - added `POST /export-report` and implemented backend PDF generation with ReportLab
-- upgraded the PDF export to a more professional SOC-style design with executive summary sections, risk visuals, campaign cards, timeline tables, and branded footer watermarking
+- upgraded the PDF export to a more professional SOC-style design with executive summary sections, risk visuals, campaign cards, timeline tables, and a centered transparent page watermark
 - added `frontend/components/InvestigatorLayout.tsx` and reorganized the dashboard into an investigator-focused workspace
 - added frontend campaign and risk summary surfaces and preserved the existing timeline and evidence views
 - added `AttackMap` with GeoIP markers, cases pages, rules editor, and live streaming controls
 - upgraded the top navigation with a case switcher and URL-driven global investigation search
+- replaced the old single-page dashboard flow with an app shell that separates `Overview`, `Investigations`, `Live Monitor`, `Cases`, `Executive`, `Rules`, and `Settings`
+- added `frontend/components/AppShell.tsx`, `SidebarNav.tsx`, and `CommandBar.tsx` for the reusable workspace shell
+- added `frontend/components/OverviewPage.tsx` and changed `/` into an overview route instead of the primary upload canvas
+- added `/live-monitor` and `/settings` routes
+- rebuilt the investigation workspace into a tabbed analyst surface with a summary strip, structured filter bar, dense tables, and a persistent context drawer
 - replaced the plain risk number with a gauge-style risk summary
 - replaced the vertical attack timeline with a phased analyst flow view
 - added an investigation actions panel for copyable commands and AI next steps
@@ -212,7 +223,7 @@ The latest completed changes already in the workspace are:
 - normalized frontend API responses so older backends missing `timeline`, `risk_assessment`, or `attack_campaigns` still resolve safely
 - improved Ollama prompting and parsing so canonical risk remains stable even when model output is low quality
 - added AI `next_steps` to both live and fallback analysis paths
-- added `backend/tests/fixtures/sample_access_demo.log`, a 184-line professional SOC demo fixture with realistic benign traffic and multi-stage attacker activity
+- added `backend/tests/fixtures/sample_access_demo.log`, a 589-line professional SOC demo fixture with realistic benign traffic and multi-stage attacker activity across Germany, India, France, Singapore, the United States, China, Russia, and Pakistan
 - fixed duplicate React key handling in `frontend/components/AttackCampaigns.tsx` by deduplicating repeated campaign preview events and strengthening rendered keys
 - updated `.gitignore` to ignore local Next.js build cache directories such as `frontend/.next-*`
 
@@ -435,18 +446,20 @@ Returns readiness information for:
 
 What the current dashboard does:
 
-- allows guest investigations on `/`
+- uses `/` as an overview and command-center route
+- uses `/investigations` as the primary upload and triage workspace
+- uses `/live-monitor` as the dedicated WebSocket streaming workspace
 - enforces login after 3 successful guest analyses
-- restores the active guest case on the root dashboard
+- restores the active guest case inside the investigation workspace
 - provides authenticated access to cases, rules, and executive pages
 - uploads supported log files with staged progress states
 - renders AI analysis with live versus fallback labeling
 - shows AI-recommended `next_steps`
-- shows a canonical risk summary with the current incident score
-- shows attack campaigns and attack timeline views for correlated investigations
-- supports case-scoped search queries
-- shows investigation-ready detection cards with evidence previews
-- shows parsed events in a structured table
+- shows a compact top summary strip with current incident state
+- shows attack campaigns, attack timeline, parsed events, and map views inside a tabbed analyst workspace
+- supports case-scoped search queries and shared filter-bar state
+- opens detection, event, campaign, timeline, and GeoIP detail in a persistent context drawer
+- shows investigation-ready evidence previews from dense tables instead of long card stacks
 - downloads a styled PDF incident report using the current analyzed snapshot
 - creates and opens read-only share links for cases
 - shows UTC timestamps in the timeline and parsed events table
@@ -460,8 +473,8 @@ Current backend fixtures available for manual and automated testing:
   - compact 23-line baseline suspicious fixture used by automated API and auth tests
   - covers brute-force, scanning/fuzzing, and multi-endpoint probing without the larger analyst demo volume
 - `backend/tests/fixtures/sample_access_demo.log`
-  - professional 184-line SOC demo fixture
-  - mixes realistic benign browsing, API traffic, health checks, scanners, brute-force activity, and multi-stage attacker behavior
+  - professional 589-line SOC demo fixture
+  - mixes realistic benign browsing, API traffic, health checks, scanners, brute-force activity, and multi-stage attacker behavior across 8 countries
   - useful for attack campaigns, timeline, search, executive metrics, GeoIP map enrichment, and PDF export demos
 
 ## Verification Completed
@@ -488,7 +501,7 @@ Completed successfully:
 
 - `npm.cmd run lint`
 - production build passed with a dist-dir override:
-  - `$env:NEXT_DIST_DIR='.next-final-verify-escalated-4'; node .\node_modules\next\dist\bin\next build --webpack`
+  - `$env:NEXT_DIST_DIR='.next-redesign-verify'; node .\node_modules\next\dist\bin\next build --webpack`
 
 Latest note:
 
@@ -531,7 +544,7 @@ npm.cmd run dev
 If Windows keeps the default `.next` directory locked in your local environment, use:
 
 ```powershell
-$env:NEXT_DIST_DIR='.next-final-verify-escalated-4'; node .\node_modules\next\dist\bin\next build --webpack
+$env:NEXT_DIST_DIR='.next-redesign-verify'; node .\node_modules\next\dist\bin\next build --webpack
 ```
 
 ### Manual SOC workflow smoke checks
@@ -595,17 +608,23 @@ $env:NEXT_DIST_DIR='.next-final-verify-escalated-4'; node .\node_modules\next\di
 - `backend/tests/test_query_parser.py`
 - `backend/tests/test_risk_engine.py`
 - `frontend/app/page.tsx`
+- `frontend/app/investigations/page.tsx`
+- `frontend/app/live-monitor/page.tsx`
+- `frontend/app/settings/page.tsx`
 - `frontend/app/cases/[id]/page.tsx`
 - `frontend/app/share/[token]/page.tsx`
 - `frontend/app/login/page.tsx`
 - `frontend/app/register/page.tsx`
 - `frontend/app/executive/page.tsx`
-- `frontend/components/InvestigatorLayout.tsx`
-- `frontend/components/AttackCampaigns.tsx`
-- `frontend/components/AttackTimeline.tsx`
+- `frontend/components/AppShell.tsx`
+- `frontend/components/SidebarNav.tsx`
+- `frontend/components/CommandBar.tsx`
+- `frontend/components/OverviewPage.tsx`
+- `frontend/components/AnalystWorkspace.tsx`
+- `frontend/components/ContextDrawer.tsx`
+- `frontend/components/InvestigationFilterBar.tsx`
 - `frontend/components/AuthProvider.tsx`
 - `frontend/components/RequireAuth.tsx`
-- `frontend/components/RiskSummary.tsx`
 - `frontend/lib/api.ts`
 - `frontend/lib/platform-api.ts`
 - `frontend/lib/http.ts`

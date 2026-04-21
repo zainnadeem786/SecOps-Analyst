@@ -5,8 +5,8 @@ import { useParams } from "next/navigation";
 import { Eye, Loader2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AnalystWorkspace } from "@/components/AnalystWorkspace";
 import { CaseSessions } from "@/components/CaseSessions";
-import { InvestigationWorkspace } from "@/components/InvestigationWorkspace";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSharedCase } from "@/lib/platform-api";
@@ -113,7 +113,7 @@ export default function SharedCasePage() {
         </Card>
 
         <Suspense fallback={null}>
-          <InvestigationWorkspace
+          <AnalystWorkspace
             result={selectedSnapshot}
             status={isLoading ? "running" : selectedSnapshot ? "success" : "idle"}
             analysisStage="ai"

@@ -40,6 +40,17 @@ body {
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 .font-heading {
   font-family: "Space Grotesk", "Aptos", "Trebuchet MS", sans-serif;
 }

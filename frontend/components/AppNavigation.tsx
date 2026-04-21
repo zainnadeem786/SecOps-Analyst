@@ -172,7 +172,7 @@ export function AppNavigation() {
                     <>
                       <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-200">
                         <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]" />
-                        <span className="block max-w-[220px] truncate">{user.email}</span>
+                        <span className="block max-w-[220px] truncate">{user?.email ?? "Analyst"}</span>
                       </div>
                       <Button variant="secondary" className="rounded-full px-4" onClick={() => void logout()}>
                         <LogOut className="h-4 w-4" />
